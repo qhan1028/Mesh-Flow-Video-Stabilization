@@ -79,11 +79,10 @@ class MeshFlowStabilizer:
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         ret, old_frame = cap.read()
         old_gray = cv2.cvtColor(old_frame, cv2.COLOR_BGR2GRAY)
-        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         # preserve aspect ratio
-        HORIZONTAL_BORDER = 30
-        VERTICAL_BORDER = (HORIZONTAL_BORDER * old_gray.shape[1]) / old_gray.shape[0]
+        HORIZONTAL_BORDER = int(30)
+        VERTICAL_BORDER = int((HORIZONTAL_BORDER * old_gray.shape[1]) / old_gray.shape[0])
 
         # motion meshes in x-direction and y-direction
         x_motion_meshes = []
@@ -94,8 +93,8 @@ class MeshFlowStabilizer:
         y_paths = np.zeros((int(old_frame.shape[0] / self.PIXELS), int(old_frame.shape[1] / self.PIXELS), 1))
 
         frame_num = 1
-        bar = tqdm(total=frame_count, ascii=False, desc="read")
-        while frame_num < frame_count:
+        bar = tqdm(total=self.frame_count, ascii=False, desc="read")
+        while frame_num < self.frame_count:
 
             # processing frames
             ret, frame = cap.read()
@@ -132,6 +131,7 @@ class MeshFlowStabilizer:
             old_frame = frame.copy()
             old_gray = frame_gray.copy()
 
+        cap.release()
         bar.close()
 
         self.HORIZONTAL_BORDER = HORIZONTAL_BORDER
