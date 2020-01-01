@@ -94,7 +94,7 @@ class MeshFlowStabilizer:
         y_paths = np.zeros((int(old_frame.shape[0] / self.PIXELS), int(old_frame.shape[1] / self.PIXELS), 1))
 
         frame_num = 1
-        bar = tqdm(total=frame_count, ascii=False)
+        bar = tqdm(total=frame_count, ascii=False, desc="read")
         while frame_num < frame_count:
 
             # processing frames
@@ -169,7 +169,7 @@ class MeshFlowStabilizer:
 
         frame_num = 0
 
-        bar = tqdm(total=self.frame_count, ascii=False)
+        bar = tqdm(total=self.frame_count, ascii=False, desc="output")
         while frame_num < self.frame_count:
             try:
                 # reconstruct from frames

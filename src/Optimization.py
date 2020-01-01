@@ -10,7 +10,7 @@ def gauss(t, r, window_size):
     @param: r is the index of point in window 
     
     Return:
-            returns spacial guassian weights over a window size
+            returns spacial gaussian weights over a window size
     """
     if np.abs(r-t) > window_size:
         return 0
@@ -67,7 +67,7 @@ def real_time_optimize_path(c, buffer_size=200, iterations=10, window_size=32, b
         for j in range(W.shape[1]):
             W[i,j] = gauss(i, j, window_size)
     
-    bar = tqdm(total=c.shape[0]*c.shape[1], ascii=False)
+    bar = tqdm(total=c.shape[0]*c.shape[1], ascii=False, desc="stabilize")
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             y = []; d = None
