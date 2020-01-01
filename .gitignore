@@ -1,2 +1,6 @@
 src/.ipynb_checkpoints
 src/*.pyc
+.idea/
+data/
+results/
+src/__pycache__/

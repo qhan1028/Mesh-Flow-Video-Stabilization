@@ -7,7 +7,7 @@ from scipy.signal import medfilt
 # block of size in mesh
 PIXELS = 16
 
-# motion propogation radius
+# motion propagation radius
 RADIUS = 300
 
 def point_transform(H, pt):
@@ -40,7 +40,7 @@ def motion_propagate(old_points, new_points, old_frame):
     """
     # spreads motion over the mesh for the old_frame
     x_motion = {}; y_motion = {};
-    cols, rows = old_frame.shape[1]/PIXELS, old_frame.shape[0]/PIXELS
+    cols, rows = int(old_frame.shape[1]/PIXELS), int(old_frame.shape[0]/PIXELS)
     
     # pre-warping with global homography
     H, _ = cv2.findHomography(old_points, new_points, cv2.RANSAC)
@@ -51,7 +51,7 @@ def motion_propagate(old_points, new_points, old_frame):
             x_motion[i, j] = pt[0]-ptrans[0]
             y_motion[i, j] = pt[1]-ptrans[1]
             
-    # disturbute feature motion vectors
+    # distribute feature motion vectors
     temp_x_motion = {}; temp_y_motion = {}
     for i in range(rows):
         for j in range(cols):
@@ -77,12 +77,12 @@ def motion_propagate(old_points, new_points, old_frame):
     for key in x_motion.keys():
         try:
             temp_x_motion[key].sort()
-            x_motion_mesh[key] = x_motion[key]+temp_x_motion[key][len(temp_x_motion[key])/2]
+            x_motion_mesh[key] = x_motion[key]+temp_x_motion[key][int(len(temp_x_motion[key])/2)]
         except KeyError:
             x_motion_mesh[key] = x_motion[key]
         try:
             temp_y_motion[key].sort()
-            y_motion_mesh[key] = y_motion[key]+temp_y_motion[key][len(temp_y_motion[key])/2]
+            y_motion_mesh[key] = y_motion[key]+temp_y_motion[key][int(len(temp_y_motion[key])/2)]
         except KeyError:
             y_motion_mesh[key] = y_motion[key]
     
@@ -98,9 +98,9 @@ def generate_vertex_profiles(x_paths, y_paths, x_motion_mesh, y_motion_mesh):
     @param: x_paths is vertex profiles along x-direction
     @param: y_paths is vertex profiles along y_direction
     @param: x_motion_mesh is obtained motion mesh along 
-            x-direction from motion_propogate()
+            x-direction from motion_propagate()
     @param: y_motion_mesh is obtained motion mesh along 
-            y-direction from motion_propogate()
+            y-direction from motion_propagate()
 
     Returns:
             returns updated x_paths, y_paths with new 

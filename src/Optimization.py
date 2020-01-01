@@ -67,7 +67,7 @@ def real_time_optimize_path(c, buffer_size=200, iterations=10, window_size=32, b
         for j in range(W.shape[1]):
             W[i,j] = gauss(i, j, window_size)
     
-    bar = tqdm(total=c.shape[0]*c.shape[1])
+    bar = tqdm(total=c.shape[0]*c.shape[1], ascii=False)
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             y = []; d = None
