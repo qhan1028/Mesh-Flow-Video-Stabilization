@@ -1,7 +1,7 @@
 from .meshflow import generate_vertex_profiles
 from .meshflow import mesh_warp_frame
 from .meshflow import motion_propagate
-from .optimization import offline_optimize_path, real_time_optimize_path, cvx_optimize_path
+from .optimization import real_time_optimize_path, offline_optimize_path, cvx_optimize_path
 from .utils import check_dir, get_logger, is_video
 from tqdm import tqdm
 import argparse
@@ -24,11 +24,11 @@ stabilizer = {
 parser = argparse.ArgumentParser('Mesh Flow Stabilization')
 parser.add_argument('source_path', type=str, help='input folder or file path')
 parser.add_argument('output_dir', type=str, help='output folder')
-parser.add_argument('-m', '--method', type=str, choices=['real_time', 'offline', 'cvx'], help='stabilization method')
+parser.add_argument('-m', '--method', type=str, choices=['real_time', 'offline', 'cvx'], default="real_time", help='stabilization method')
 parser.add_argument('--plot', action='store_true', default=False, help='plot paths and motion vectors')
-parser.add_argument('--plot_dir', type=str, default='data/plot', help='output graph folder')
+parser.add_argument('--plot-dir', type=str, default='data/plot', help='output graph folder')
 parser.add_argument('--save-params', action='store_true', default=False, help='save parameters')
-parser.add_argument('--params_dir', type=str, default='data/params', help='parameters folder')
+parser.add_argument('--params-dir', type=str, default='data/params', help='parameters folder')
 
 
 class MeshFlowStabilizer:
@@ -46,18 +46,21 @@ class MeshFlowStabilizer:
         # setup dir
         name, ext = osp.splitext(osp.basename(source_video))
         self.source_video = source_video
-
+        
+        self.combined_path = osp.join(output_dir, name + '-combined' + ext)
+        self.stabilized_path = osp.join(output_dir, name + '-stabilized' + ext)
+        check_dir(output_dir)
+        
         self.vertex_profiles_dir = osp.join(plot_dir, 'paths', name)
         self.old_motion_vectors_dir = osp.join(plot_dir, 'old_motion_vectors', name)
         self.new_motion_vectors_dir = osp.join(plot_dir, 'new_motion_vectors', name)
-
-        self.combined_path = osp.join(output_dir, name + '-combined' + ext)
-        self.stabilized_path = osp.join(output_dir, name + '-stabilized' + ext)
+        
         self.params_path = osp.join(params_dir, name + '.pickle')
-        check_dir(output_dir)
+        self.params_dir = params_dir
 
         # method
         self.method = method
+        log.info('method: %s' % self.method.replace('_', ' '))
 
         # flags
         self.save = save
@@ -65,6 +68,8 @@ class MeshFlowStabilizer:
         self.frame_warped = False
         
         if self.save and osp.exists(self.params_path):
+            # read parameters from last run
+            log.info('load params: %s' % self.params_path)
             self._load_params()
 
         else:
@@ -195,6 +200,7 @@ class MeshFlowStabilizer:
         self.stabilized = True
         
     def _save_params(self):
+        check_dir(self.params_dir)
         params_dict = {
             'pixels': self.pixels,
             'radius': self.radius,
@@ -322,14 +328,14 @@ def process_file(args):
 
     start_time = time.time()
 
-    mfs = MeshFlowStabilizer(args.source_path, args.output_dir, args.plot_dir, args.params_dir, args.method)
+    mfs = MeshFlowStabilizer(args.source_path, args.output_dir, args.plot_dir, args.params_dir, args.method, args.save_params)
     mfs.generate_stabilized_video()
 
     if args.plot:
         mfs.plot_motion_vectors()
         mfs.plot_vertex_profiles()
 
-    log.info('Time elapsed: %.2f' % (time.time() - start_time))
+    log.info('time elapsed: %.2f' % (time.time() - start_time))
 
 
 def process_dir(args):

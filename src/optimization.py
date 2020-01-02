@@ -36,16 +36,19 @@ def offline_optimize_path(c, iterations=100, window_size=6):
         for r in range(int(-window_size / 2), int(window_size / 2 + 1)):
             if t + r < 0 or t + r >= W.shape[1] or r == 0:
                 continue
+                
             W[t, t + r] = gauss(t, t + r, window_size)
 
     gamma = 1 + lambda_t * np.dot(W, np.ones((c.shape[2],)))
 
-    bar = tqdm(total=c.shape[0] * c.shape[1])
+    bar = tqdm(total=c.shape[0] * c.shape[1], desc="optimize")
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             P = np.asarray(c[i, j, :])
+            
             for iteration in range(iterations):
                 P = np.divide(c[i, j, :] + lambda_t * np.dot(W, P), gamma)
+                
             p[i, j, :] = np.asarray(P)
             bar.update(1)
 
@@ -69,11 +72,12 @@ def real_time_optimize_path(c, buffer_size=200, iterations=10, window_size=32, b
         for j in range(W.shape[1]):
             W[i, j] = gauss(i, j, window_size)
 
-    bar = tqdm(total=c.shape[0] * c.shape[1], ascii=False, desc="stabilize")
+    bar = tqdm(total=c.shape[0] * c.shape[1], ascii=False, desc="optimize")
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             y = [];
             d = None
+            
             # real-time optimization
             for t in range(1, c.shape[2] + 1):
                 if t < buffer_size + 1:
@@ -85,19 +89,25 @@ def real_time_optimize_path(c, buffer_size=200, iterations=10, window_size=32, b
                             gamma = 1 + lambda_t * np.dot(W[:t, :t], np.ones((t,)))
                             gamma[:-1] = gamma[:-1] + beta
                             P = np.divide(alpha, gamma)
+                            
                 else:
                     P = np.asarray(c[i, j, t - buffer_size:t])
+                    
                     for _ in range(iterations):
                         alpha = c[i, j, t - buffer_size:t] + lambda_t * np.dot(W, P)
                         alpha[:-1] = alpha[:-1] + beta * d[1:]
                         gamma = 1 + lambda_t * np.dot(W, np.ones((buffer_size,)))
                         gamma[:-1] = gamma[:-1] + beta
                         P = np.divide(alpha, gamma)
+                        
                 d = np.asarray(P);
                 y.append(P[-1])
+                
             p[i, j, :] = np.asarray(y)
             bar.update(1)
+            
     bar.close()
+    
     return p
 
 
@@ -132,9 +142,12 @@ def cvx_optimize_path(c, buffer_size=0, window_size=6):
 
     gauss_term, objective = 0, 0
     p = np.empty_like(c)
+    
+    bar = tqdm(total=c.shape[0] * c.shape[1] * c.shape[2], ascii=False, desc="optimize")
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             P = Variable(c.shape[2])
+            
             for t in range(c.shape[2]):
 
                 # first term for optimised path to be close to camera path
@@ -155,7 +168,13 @@ def cvx_optimize_path(c, buffer_size=0, window_size=6):
                     objective = path_term + lambda_t * gauss_term
                 else:
                     objective += path_term + lambda_t * gauss_term
+                    
+                bar.update(1)
+                    
             prob = Problem(Minimize(objective))
             prob.solve()
             p[i, j, :] = np.asarray(P.value).reshape(-1)
+    
+    bar.close()
+    
     return p
