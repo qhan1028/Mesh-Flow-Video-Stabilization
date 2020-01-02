@@ -62,7 +62,7 @@ if __name__ == '__main__':
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # generate stabilized video
+    # generate stabilized-v1 video
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter('stable-4.avi', fourcc, frame_rate, (2*frame_width, frame_height))
 

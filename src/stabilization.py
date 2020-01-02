@@ -11,6 +11,7 @@ import numpy as np
 import os
 import os.path as osp
 import time
+import pickle
 
 
 log = get_logger('meshflow')
@@ -27,12 +28,12 @@ parser.add_argument('--params_dir', type=str, default='data/params', help='param
 
 class MeshFlowStabilizer:
 
-    def __init__(self, source_video, output_dir, plot_dir, params_dir):
+    def __init__(self, source_video, output_dir, plot_dir, params_dir, save=True):
         # block of size in mesh
-        self.PIXELS = 16
+        self.pixels = 16
 
         # motion propagation radius
-        self.RADIUS = 300
+        self.radius = 300
 
         if not osp.exists(source_video):
             raise FileNotFoundError('source video not found')
@@ -47,14 +48,19 @@ class MeshFlowStabilizer:
 
         self.combined_path = osp.join(output_dir, name + '-combined' + ext)
         self.stabilized_path = osp.join(output_dir, name + '-stabilized' + ext)
-        self.params_dir = osp.join(params_dir, name)
+        self.params_path = osp.join(params_dir, name + '.pickle')
         check_dir(output_dir)
-
-        # read video
-        self._read_video()
-
+        
+        self.save = save
         self.stabilized = False
         self.frame_warped = False
+        
+        if self.save and osp.exists(self.params_path):
+            self._load_params()
+
+        else:
+            # read video
+            self._read_video()
 
     def _read_video(self):
         cap = cv2.VideoCapture(self.source_video)
@@ -62,7 +68,7 @@ class MeshFlowStabilizer:
         self.frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
         # params for ShiTomasi corner detection
         feature_params = dict(maxCorners=1000,
@@ -89,8 +95,8 @@ class MeshFlowStabilizer:
         y_motion_meshes = []
 
         # path parameters
-        x_paths = np.zeros((int(old_frame.shape[0] / self.PIXELS), int(old_frame.shape[1] / self.PIXELS), 1))
-        y_paths = np.zeros((int(old_frame.shape[0] / self.PIXELS), int(old_frame.shape[1] / self.PIXELS), 1))
+        x_paths = np.zeros((int(old_frame.shape[0] / self.pixels), int(old_frame.shape[1] / self.pixels), 1))
+        y_paths = np.zeros((int(old_frame.shape[0] / self.pixels), int(old_frame.shape[1] / self.pixels), 1))
 
         frame_num = 1
         bar = tqdm(total=self.frame_count, ascii=False, desc="read")
@@ -134,8 +140,8 @@ class MeshFlowStabilizer:
         cap.release()
         bar.close()
 
-        self.HORIZONTAL_BORDER = HORIZONTAL_BORDER
-        self.VERTICAL_BORDER = VERTICAL_BORDER
+        self.horizontal_border = HORIZONTAL_BORDER
+        self.vertical_border = VERTICAL_BORDER
         self.x_motion_meshes = x_motion_meshes
         self.y_motion_meshes = y_motion_meshes
         self.x_paths = x_paths
@@ -147,6 +153,9 @@ class MeshFlowStabilizer:
             self.sx_paths = real_time_optimize_path(self.x_paths)
             self.sy_paths = real_time_optimize_path(self.y_paths)
             self.stabilized = True
+            
+            if self.save:
+                self._save_params()
 
     def _get_frame_warp(self):
         if not self.frame_warped:
@@ -155,17 +164,58 @@ class MeshFlowStabilizer:
             self.new_x_motion_meshes = self.sx_paths - self.x_paths
             self.new_y_motion_meshes = self.sy_paths - self.y_paths
             self.frame_warped = True
+            
+    def _load_params(self):
+        with open(self.params_path, 'rb') as f:
+            params_dict = pickle.load(f)
+            
+        self.pixels = params_dict['pixels']
+        self.radius = params_dict['radius']
+        self.frame_rate = params_dict['frame_rate']
+        self.frame_width = params_dict['frame_width']
+        self.frame_height = params_dict['frame_height']
+        self.frame_count = params_dict['frame_count']
+        self.horizontal_border = params_dict['horizontal_border']
+        self.vertical_border = params_dict['vertical_border']
+        self.x_motion_meshes = params_dict['x_motion_meshes']
+        self.y_motion_meshes = params_dict['y_motion_meshes']
+        self.x_paths = params_dict['x_paths']
+        self.y_paths = params_dict['y_paths']
+        self.sx_paths = params_dict['sx_paths']
+        self.sy_paths = params_dict['sy_paths']
+        self.stabilized = True
+        
+    def _save_params(self):
+        params_dict = {
+            'pixels': self.pixels,
+            'radius': self.radius,
+            'frame_rate': self.frame_rate,
+            'frame_height': self.frame_height,
+            'frame_width': self.frame_width,
+            'frame_count': self.frame_count,
+            'horizontal_border': self.horizontal_border,
+            'vertical_border': self.vertical_border,
+            'x_motion_meshes': self.x_motion_meshes,
+            'y_motion_meshes': self.y_motion_meshes,
+            'x_paths': self.x_paths,
+            'y_paths': self.y_paths,
+            'sx_paths': self.sx_paths,
+            'sy_paths': self.sy_paths
+        }
+        with open(self.params_path, 'wb') as f:
+            pickle.dump(params_dict, f)
 
     def generate_stabilized_video(self):
         self._stabilize()
         self._get_frame_warp()
 
         cap = cv2.VideoCapture(self.source_video)
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
         combined_shape = (2 * self.frame_width, self.frame_height)
-        combined_out = cv2.VideoWriter(self.combined_path, self.fourcc, self.frame_rate, combined_shape)
+        combined_out = cv2.VideoWriter(self.combined_path, fourcc, self.frame_rate, combined_shape)
         stabilized_shape = (self.frame_width, self.frame_height)
-        stabilized_out = cv2.VideoWriter(self.stabilized_path, self.fourcc, self.frame_rate, stabilized_shape)
+        stabilized_out = cv2.VideoWriter(self.stabilized_path, fourcc, self.frame_rate, stabilized_shape)
 
         frame_num = 0
 
@@ -179,7 +229,7 @@ class MeshFlowStabilizer:
 
                 # mesh warping
                 new_frame = mesh_warp_frame(frame, new_x_motion_mesh, new_y_motion_mesh)
-                new_frame = new_frame[self.HORIZONTAL_BORDER:-self.HORIZONTAL_BORDER, self.VERTICAL_BORDER:-self.VERTICAL_BORDER, :]
+                new_frame = new_frame[self.horizontal_border:-self.horizontal_border, self.vertical_border:-self.vertical_border, :]
                 new_frame = cv2.resize(new_frame, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_CUBIC)
 
                 # write frame
@@ -201,7 +251,7 @@ class MeshFlowStabilizer:
     def plot_vertex_profiles(self):
         check_dir(self.vertex_profiles_dir)
 
-        if self.x_paths and self.sx_paths:
+        if self.stabilized:
             for i in range(0, self.x_paths.shape[0]):
                 for j in range(0, self.x_paths.shape[1], 10):
                     plt.plot(self.x_paths[i, j, :])
@@ -228,8 +278,8 @@ class MeshFlowStabilizer:
 
                 # mesh warping
                 new_frame = mesh_warp_frame(frame, new_x_motion_mesh, new_y_motion_mesh)
-                new_frame = new_frame[self.HORIZONTAL_BORDER:-self.HORIZONTAL_BORDER,
-                            self.VERTICAL_BORDER:-self.VERTICAL_BORDER, :]
+                new_frame = new_frame[self.horizontal_border:-self.horizontal_border,
+                            self.vertical_border:-self.vertical_border, :]
                 new_frame = cv2.resize(new_frame, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_CUBIC)
 
                 # draw old motion vectors
@@ -237,16 +287,16 @@ class MeshFlowStabilizer:
                 for i in range(x_motion_mesh.shape[0]):
                     for j in range(x_motion_mesh.shape[1]):
                         theta = np.arctan2(y_motion_mesh[i, j], x_motion_mesh[i, j])
-                        cv2.line(frame, (j * self.PIXELS, i * self.PIXELS),
-                                 (int(j * self.PIXELS + r * np.cos(theta)), int(i * self.PIXELS + r * np.sin(theta))), 1)
+                        cv2.line(frame, (j * self.pixels, i * self.pixels),
+                                 (int(j * self.pixels + r * np.cos(theta)), int(i * self.pixels + r * np.sin(theta))), 1)
                 cv2.imwrite(osp.join(self.old_motion_vectors_dir, str(frame_num) + '.png'), frame)
 
                 # draw new motion vectors
                 for i in range(new_x_motion_mesh.shape[0]):
                     for j in range(new_x_motion_mesh.shape[1]):
                         theta = np.arctan2(new_y_motion_mesh[i, j], new_x_motion_mesh[i, j])
-                        cv2.line(new_frame, (j * self.PIXELS, i * self.PIXELS),
-                                 (int(j * self.PIXELS + r * np.cos(theta)), int(i * self.PIXELS + r * np.sin(theta))), 1)
+                        cv2.line(new_frame, (j * self.pixels, i * self.pixels),
+                                 (int(j * self.pixels + r * np.cos(theta)), int(i * self.pixels + r * np.sin(theta))), 1)
                 cv2.imwrite(osp.join(self.new_motion_vectors_dir, str(frame_num) + '.png'), new_frame)
 
                 frame_num += 1
