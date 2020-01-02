@@ -33,7 +33,7 @@ def offline_optimize_path(c, iterations=100, window_size=6):
 
     W = np.zeros((c.shape[2], c.shape[2]))
     for t in range(W.shape[0]):
-        for r in range(-window_size / 2, window_size / 2 + 1):
+        for r in range(int(-window_size / 2), int(window_size / 2 + 1)):
             if t + r < 0 or t + r >= W.shape[1] or r == 0:
                 continue
             W[t, t + r] = gauss(t, t + r, window_size)
@@ -130,6 +130,7 @@ def cvx_optimize_path(c, buffer_size=0, window_size=6):
     if window_size > c.shape[2]:
         window_size = c.shape[2]
 
+    gauss_term, objective = 0, 0
     p = np.empty_like(c)
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
