@@ -4,3 +4,4 @@ src/*.pyc
 data/
 results/
 src/__pycache__/
+.DS_Store

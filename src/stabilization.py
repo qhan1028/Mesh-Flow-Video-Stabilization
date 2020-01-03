@@ -46,30 +46,26 @@ class MeshFlowStabilizer:
         # setup dir
         name, ext = osp.splitext(osp.basename(source_video))
         self.source_video = source_video
-        
-        self.combined_path = osp.join(output_dir, name + '-combined' + ext)
-        self.stabilized_path = osp.join(output_dir, name + '-stabilized' + ext)
-        check_dir(output_dir)
-        
+
         self.vertex_profiles_dir = osp.join(plot_dir, 'paths', name)
         self.old_motion_vectors_dir = osp.join(plot_dir, 'old_motion_vectors', name)
         self.new_motion_vectors_dir = osp.join(plot_dir, 'new_motion_vectors', name)
-        
+
+        self.combined_path = osp.join(output_dir, name + '-combined' + ext)
+        self.stabilized_path = osp.join(output_dir, name + '-stabilized' + ext)
         self.params_path = osp.join(params_dir, name + '.pickle')
         self.params_dir = params_dir
+        check_dir(output_dir)
 
         # method
         self.method = method
-        log.info('method: %s' % self.method.replace('_', ' '))
 
         # flags
         self.save = save
         self.stabilized = False
         self.frame_warped = False
-        
+
         if self.save and osp.exists(self.params_path):
-            # read parameters from last run
-            log.info('load params: %s' % self.params_path)
             self._load_params()
 
         else:
@@ -167,22 +163,24 @@ class MeshFlowStabilizer:
             self.sx_paths = stabilizer[self.method](self.x_paths)
             self.sy_paths = stabilizer[self.method](self.y_paths)
             self.stabilized = True
-            
+
             if self.save:
                 self._save_params()
 
     def _get_frame_warp(self):
         if not self.frame_warped:
-            self.x_motion_meshes_2d = np.concatenate((self.x_motion_meshes, np.expand_dims(self.x_motion_meshes[:, :, -1], axis=2)), axis=2)
-            self.y_motion_meshes_2d = np.concatenate((self.y_motion_meshes, np.expand_dims(self.y_motion_meshes[:, :, -1], axis=2)), axis=2)
+            self.x_motion_meshes_2d = np.concatenate(
+                (self.x_motion_meshes, np.expand_dims(self.x_motion_meshes[:, :, -1], axis=2)), axis=2)
+            self.y_motion_meshes_2d = np.concatenate(
+                (self.y_motion_meshes, np.expand_dims(self.y_motion_meshes[:, :, -1], axis=2)), axis=2)
             self.new_x_motion_meshes = self.sx_paths - self.x_paths
             self.new_y_motion_meshes = self.sy_paths - self.y_paths
             self.frame_warped = True
-            
+
     def _load_params(self):
         with open(self.params_path, 'rb') as f:
             params_dict = pickle.load(f)
-            
+
         self.pixels = params_dict['pixels']
         self.radius = params_dict['radius']
         self.frame_rate = params_dict['frame_rate']
@@ -198,7 +196,7 @@ class MeshFlowStabilizer:
         self.sx_paths = params_dict['sx_paths']
         self.sy_paths = params_dict['sy_paths']
         self.stabilized = True
-        
+
     def _save_params(self):
         check_dir(self.params_dir)
         params_dict = {
@@ -234,7 +232,7 @@ class MeshFlowStabilizer:
 
         frame_num = 0
 
-        bar = tqdm(total=self.frame_count, ascii=False, desc="output")
+        bar = tqdm(total=self.frame_count, ascii=False, desc="write")
         while frame_num < self.frame_count:
             try:
                 # reconstruct from frames
@@ -244,7 +242,8 @@ class MeshFlowStabilizer:
 
                 # mesh warping
                 new_frame = mesh_warp_frame(frame, new_x_motion_mesh, new_y_motion_mesh)
-                new_frame = new_frame[self.horizontal_border:-self.horizontal_border, self.vertical_border:-self.vertical_border, :]
+                new_frame = new_frame[self.horizontal_border:-self.horizontal_border,
+                            self.vertical_border:-self.vertical_border, :]
                 new_frame = cv2.resize(new_frame, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_CUBIC)
 
                 # write frame
@@ -303,7 +302,8 @@ class MeshFlowStabilizer:
                     for j in range(x_motion_mesh.shape[1]):
                         theta = np.arctan2(y_motion_mesh[i, j], x_motion_mesh[i, j])
                         cv2.line(frame, (j * self.pixels, i * self.pixels),
-                                 (int(j * self.pixels + r * np.cos(theta)), int(i * self.pixels + r * np.sin(theta))), 1)
+                                 (int(j * self.pixels + r * np.cos(theta)), int(i * self.pixels + r * np.sin(theta))),
+                                 1)
                 cv2.imwrite(osp.join(self.old_motion_vectors_dir, str(frame_num) + '.png'), frame)
 
                 # draw new motion vectors
@@ -311,12 +311,13 @@ class MeshFlowStabilizer:
                     for j in range(new_x_motion_mesh.shape[1]):
                         theta = np.arctan2(new_y_motion_mesh[i, j], new_x_motion_mesh[i, j])
                         cv2.line(new_frame, (j * self.pixels, i * self.pixels),
-                                 (int(j * self.pixels + r * np.cos(theta)), int(i * self.pixels + r * np.sin(theta))), 1)
+                                 (int(j * self.pixels + r * np.cos(theta)), int(i * self.pixels + r * np.sin(theta))),
+                                 1)
                 cv2.imwrite(osp.join(self.new_motion_vectors_dir, str(frame_num) + '.png'), new_frame)
 
                 frame_num += 1
                 bar.update(1)
-                
+
             except:
                 break
 
@@ -328,7 +329,8 @@ def process_file(args):
 
     start_time = time.time()
 
-    mfs = MeshFlowStabilizer(args.source_path, args.output_dir, args.plot_dir, args.params_dir, args.method, args.save_params)
+    mfs = MeshFlowStabilizer(args.source_path, args.output_dir, args.plot_dir, args.params_dir, args.method,
+                             args.save_params)
     mfs.generate_stabilized_video()
 
     if args.plot:
