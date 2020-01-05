@@ -1,8 +1,8 @@
-from .meshflow import generate_vertex_profiles
-from .meshflow import mesh_warp_frame
-from .meshflow import motion_propagate
-from .optimization import real_time_optimize_path, offline_optimize_path, cvx_optimize_path
-from .utils import check_dir, get_logger, is_video
+from meshflow import generate_vertex_profiles
+from meshflow import mesh_warp_frame
+from meshflow import motion_propagate
+from optimization import offline_optimize_path, real_time_optimize_path, parallel_optimize_path, cvx_optimize_path
+from utils import check_dir, get_logger, is_video
 from tqdm import tqdm
 import argparse
 import cv2
@@ -18,14 +18,15 @@ log = get_logger('meshflow')
 stabilizer = {
     'offline': offline_optimize_path,
     'real_time': real_time_optimize_path,
+    'parallel': parallel_optimize_path,
     'cvx': cvx_optimize_path
 }
 
 parser = argparse.ArgumentParser('Mesh Flow Stabilization')
 parser.add_argument('source_path', type=str, help='input folder or file path')
 parser.add_argument('output_dir', type=str, help='output folder')
-parser.add_argument('-m', '--method', type=str, choices=['real_time', 'offline', 'cvx'], default="real_time", help='stabilization method')
-parser.add_argument('--plot', action='store_true', default=False, help='plot paths and motion vectors')
+parser.add_argument('-m', '--method', type=str, choices=list(stabilizer.keys()), default="real_time", help='stabilization method')
+parser.add_argument('--save-plot', action='store_true', default=False, help='plot paths and motion vectors')
 parser.add_argument('--plot-dir', type=str, default='data/plot', help='output graph folder')
 parser.add_argument('--save-params', action='store_true', default=False, help='save parameters')
 parser.add_argument('--params-dir', type=str, default='data/params', help='parameters folder')

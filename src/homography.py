@@ -3,6 +3,7 @@ from cvxpy import *
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def gauss(t, r, window_size):
     """
     @param: window_size is the size of window over which gaussian to be applied
@@ -10,9 +11,10 @@ def gauss(t, r, window_size):
     @param: r is the index of point in window 
     
     Return:
-            returns spacial guassian weights over a window size
+            returns spacial gaussian weights over a window size
     """
     return np.exp((-9*(r-t)**2)/window_size**2)
+
 
 def optimize_path(c, buffer_size=0, window_size=10):
     """
@@ -86,7 +88,7 @@ if __name__ == '__main__':
     HORIZONTAL_BORDER = 50
     VERTICAL_BORDER = (HORIZONTAL_BORDER*old_gray.shape[1])/old_gray.shape[0]
 
-    print '--Generation--'
+    print('--Generation--')
     frame_num = 0
     prev_motion = []
     while frame_num < frame_count-2:
@@ -129,7 +131,7 @@ if __name__ == '__main__':
         except:
             break
 
-    print '--Optimization--'
+    print('--Optimization--')
     x = 0; x_path = [];
     y = 0; y_path = [];
     a = 0; a_path = [];
@@ -168,7 +170,7 @@ if __name__ == '__main__':
                               prev_motion[i][1]+smooth_y[i]-y_path[i],
                               prev_motion[i][2]+smooth_a[i]-a_path[i]])
     
-    print '--Reconstruction--'
+    print('--Reconstruction--')
     frame_num = 0
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     while frame_num < frame_count-3:

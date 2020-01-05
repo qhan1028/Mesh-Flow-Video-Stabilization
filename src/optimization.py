@@ -2,6 +2,7 @@ import numpy as np
 from cvxpy import *
 from tqdm import tqdm
 from multiprocessing import Pool
+from homography import optimize_path
 
 
 def gauss(t, r, window_size):
@@ -111,19 +112,24 @@ def real_time_optimize_path(c, buffer_size=200, iterations=10, window_size=32, b
     return p
 
 
-def parallel_optimize(vertex_profiles):
+def parallel_optimize_path(vertex_profiles):
     """
     @param: vertex_profiles is the accumulation of the 
             motion vectors at the mesh vertices
     
     Return:
-            returns a parallely optimized smooth vertex 
+            returns a parallel optimized smooth vertex
             profiles for all mesh vertices
     
     """
     pool = Pool(processes=20)
-    args = list(product(range(vertex_profiles.shape[0]), range(vertex_profiles.shape[1])))
-    paths = pool.map(optimize_path, [vertex_profiles[arg[0], arg[1]] for arg in args])
+    
+    profiles = []
+    for i in range(vertex_profiles.shape[0]):
+        for j in range(vertex_profiles.shape[1]):
+            profiles += [vertex_profiles[i, j]]
+            
+    paths = pool.map(optimize_path, profiles)
     return paths
 
 
