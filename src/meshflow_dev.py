@@ -25,7 +25,7 @@ def point_transform(H, pt):
     return [a/c, b/c]
 
 
-def motion_propagate_v1(old_points, new_points, old_frame):
+def motion_propagate_L2(old_points, new_points, old_frame):
     """
     @param: old_points are points in old_frame that are
             matched feature points with new_frame
@@ -99,90 +99,77 @@ def motion_propagate_v1(old_points, new_points, old_frame):
     return x_motion_mesh, y_motion_mesh
 
 
-def motion_propagate_v2(old_points, new_points, old_frame):
+def motion_propagate_L1(old_points, new_points, old_frame):
     """
-    @param: old_points are points in old_frame that are 
+    @param: old_points are points in old_frame that are
             matched feature points with new_frame
-    @param: new_points are points in new_frame that are 
+    @param: new_points are points in new_frame that are
             matched feature points with old_frame
-    @param: old_frame is the frame to which 
+    @param: old_frame is the frame to which
             motion mesh needs to be obtained
     @param: H is the homography between old and new points
-    
+
     Return:
-            returns a motion mesh in x-direction 
+            returns a motion mesh in x-direction
             and y-direction for old_frame
     """
     # spreads motion over the mesh for the old_frame
-    x_motion = {}; y_motion = {};
-    cols, rows = int(old_frame.shape[1]/PIXELS), int(old_frame.shape[0]/PIXELS)
-    
-    # time
-    s = time()
-    
+    x_motion = {};
+    y_motion = {};
+    cols, rows = int(old_frame.shape[1] / PIXELS), int(old_frame.shape[0] / PIXELS)
+
     # pre-warping with global homography
     H, _ = cv2.findHomography(old_points, new_points, cv2.RANSAC)
     for i in range(rows):
         for j in range(cols):
-            pt = [PIXELS*j, PIXELS*i]
+            pt = [PIXELS * j, PIXELS * i]
             ptrans = point_transform(H, pt)
-            x_motion[i, j] = pt[0]-ptrans[0]
-            y_motion[i, j] = pt[1]-ptrans[1]
-            
-    print('pre-warping: %.2f' % (time() - s))
-            
-    # time
-    s = time()
-    transform_sum_t = 0
-    append_sum_t = 0
-    
+            x_motion[i, j] = pt[0] - ptrans[0]
+            y_motion[i, j] = pt[1] - ptrans[1]
+
     # distribute feature motion vectors
-    temp_x_motion = {}; temp_y_motion = {}
+    temp_x_motion = {};
+    temp_y_motion = {}
     for i in range(rows):
         for j in range(cols):
-            vertex = [PIXELS*j, PIXELS*i]
+            vertex = [PIXELS * j, PIXELS * i]
             for pt, st in zip(old_points, new_points):
-                
-                if np.abs(vertex[0] - pt[0]) < RADIUS and np.abs(vertex[1] - pt[1]) < RADIUS:
-                    t = time()
-                    ptrans = point_transform(H, pt)
-                    transform_sum_t += (time() - t)
 
-                    t = time()
+                # velocity = point - feature point match in next frame
+                # dst = sqrt((vertex[0]-st[0])**2+(vertex[1]-st[1])**2)
+
+                # velocity = point - feature point in current frame
+                # dst = np.sqrt((vertex[0] - pt[0]) ** 2 + (vertex[1] - pt[1]) ** 2)
+                if np.abs(vertex[0] - pt[0]) < RADIUS and np.abs(vertex[1] - pt[1]) < RADIUS:
+                    ptrans = point_transform(H, pt)
                     try:
-                        temp_x_motion[i, j].append(st[0]-ptrans[0])
+                        temp_x_motion[i, j].append(st[0] - ptrans[0])
                     except:
-                        temp_x_motion[i, j] = [st[0]-ptrans[0]]
+                        temp_x_motion[i, j] = [st[0] - ptrans[0]]
                     try:
-                        temp_y_motion[i, j].append(st[1]-ptrans[1])
+                        temp_y_motion[i, j].append(st[1] - ptrans[1])
                     except:
-                        temp_y_motion[i, j] = [st[1]-ptrans[1]]
-                    append_sum_t += (time() - t)
-                        
-    print('distribution: %.2f, %.2f, %.2f' % (time() - s, transform_sum_t, append_sum_t))
-    
-    s = time()  # time
+                        temp_y_motion[i, j] = [st[1] - ptrans[1]]
+
     # apply median filter (f-1) on obtained motion for each vertex
     x_motion_mesh = np.zeros((rows, cols), dtype=float)
     y_motion_mesh = np.zeros((rows, cols), dtype=float)
     for key in x_motion.keys():
         try:
             temp_x_motion[key].sort()
-            x_motion_mesh[key] = x_motion[key]+temp_x_motion[key][int(len(temp_x_motion[key])/2)]
+            x_motion_mesh[key] = x_motion[key] + temp_x_motion[key][int(len(temp_x_motion[key]) / 2)]
         except KeyError:
             x_motion_mesh[key] = x_motion[key]
         try:
             temp_y_motion[key].sort()
-            y_motion_mesh[key] = y_motion[key]+temp_y_motion[key][int(len(temp_y_motion[key])/2)]
+            y_motion_mesh[key] = y_motion[key] + temp_y_motion[key][int(len(temp_y_motion[key]) / 2)]
         except KeyError:
             y_motion_mesh[key] = y_motion[key]
-            
-    print('median filter: %.2f' % (time() - s))
-    
+
     # apply second median filter (f-2) over the motion mesh for outliers
     x_motion_mesh = medfilt(x_motion_mesh, kernel_size=[3, 3])
     y_motion_mesh = medfilt(y_motion_mesh, kernel_size=[3, 3])
-    
+
     return x_motion_mesh, y_motion_mesh
 
 
@@ -205,9 +192,6 @@ def motion_propagate_fast(old_points, new_points, old_frame):
     y_motion = {};
     cols, rows = int(old_frame.shape[1] / PIXELS), int(old_frame.shape[0] / PIXELS)
 
-    # time
-    s = time()
-
     # pre-warping with global homography
     H, _ = cv2.findHomography(old_points, new_points, cv2.RANSAC)
     for i in range(rows):
@@ -217,28 +201,18 @@ def motion_propagate_fast(old_points, new_points, old_frame):
             x_motion[i, j] = pt[0] - ptrans[0]
             y_motion[i, j] = pt[1] - ptrans[1]
 
-    print('pre-warping: %.2f' % (time() - s))
-
     # distribute feature motion vectors
     temp_x_motion = {}
     temp_y_motion = {}
 
-    # time
-    s = time()
-    transform_sum_t = 0
-    append_sum_t = 0
-
     for pt, st in zip(old_points, new_points):
-        t = time()
         ptrans = point_transform(H, pt)
-        transform_sum_t += (time() - t)
 
-        si = max(np.floor((pt[1] - RADIUS) / PIXELS).astype(int), 0)
-        ei = min(np.ceil((pt[1] + RADIUS) / PIXELS).astype(int), rows)
-        sj = max(np.floor((pt[0] - RADIUS) / PIXELS).astype(int), 0)
-        ej = min(np.ceil((pt[0] + RADIUS) / PIXELS).astype(int), cols)
+        si = max(np.round((pt[1] - RADIUS) / PIXELS).astype(int), 0)
+        ei = min(np.round((pt[1] + RADIUS) / PIXELS).astype(int), rows)
+        sj = max(np.round((pt[0] - RADIUS) / PIXELS).astype(int), 0)
+        ej = min(np.round((pt[0] + RADIUS) / PIXELS).astype(int), cols)
 
-        t = time()
         dx, dy = st[0] - ptrans[0], st[1] - ptrans[1]
         for i in range(si, ei):
             for j in range(sj, ej):
@@ -250,11 +224,7 @@ def motion_propagate_fast(old_points, new_points, old_frame):
                     temp_y_motion[i, j].append(dy)
                 except:
                     temp_y_motion[i, j] = [dy]
-        append_sum_t += (time() - t)
 
-    print('distribution: %.2f, %.2f, %.2f' % (time() - s, transform_sum_t, append_sum_t))
-
-    s = time()  # time
     # apply median filter (f-1) on obtained motion for each vertex
     x_motion_mesh = np.zeros((rows, cols), dtype=float)
     y_motion_mesh = np.zeros((rows, cols), dtype=float)
@@ -270,7 +240,6 @@ def motion_propagate_fast(old_points, new_points, old_frame):
         except KeyError:
             y_motion_mesh[key] = y_motion[key]
 
-    print('median filter: %.2f' % (time() - s))
 
     # apply second median filter (f-2) over the motion mesh for outliers
     x_motion_mesh = medfilt(x_motion_mesh, kernel_size=[3, 3])
@@ -319,7 +288,8 @@ def mesh_warp_frame(frame, x_motion_mesh, y_motion_mesh):
     
     # define handles on mesh in y-direction
     map_y = np.zeros((frame.shape[0], frame.shape[1]), np.float32)
-    
+
+    s = time()
     for i in range(x_motion_mesh.shape[0]-1):
         for j in range(x_motion_mesh.shape[1]-1):
 
@@ -347,17 +317,116 @@ def mesh_warp_frame(frame, x_motion_mesh, y_motion_mesh):
                         x = l; y = k
                     map_x[k, l] = x
                     map_y[k, l] = y
-    
+
+    print('apply transform: %.2f' % (time() - s))
+
+    s = time()
     # repeat motion vectors for remaining frame in y-direction
     for i in range(PIXELS*x_motion_mesh.shape[0], map_x.shape[0]):
             map_x[i, :] = map_x[PIXELS*x_motion_mesh.shape[0]-1, :]
             map_y[i, :] = map_y[PIXELS*x_motion_mesh.shape[0]-1, :]
-    
+
+    print('map x: %.2f' % (time() - s))
+
+    s = time()
     # repeat motion vectors for remaining frame in x-direction
     for j in range(PIXELS*x_motion_mesh.shape[1], map_x.shape[1]):
             map_x[:, j] = map_x[:, PIXELS*x_motion_mesh.shape[0]-1]
             map_y[:, j] = map_y[:, PIXELS*x_motion_mesh.shape[0]-1]
-            
+
+    print('map y: %.2f' % (time() - s))
+
+    s = time()
     # deforms mesh
     new_frame = cv2.remap(frame, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    print('deform mesh: %.2f' % (time() - s))
+
+    return new_frame
+
+
+def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
+    """
+    @param: frame is the current frame
+    @param: x_motion_mesh is the motion_mesh to
+            be warped on frame along x-direction
+    @param: y_motion_mesh is the motion mesh to
+            be warped on frame along y-direction
+
+    Returns:
+            returns a mesh warped frame according
+            to given motion meshes x_motion_mesh,
+            y_motion_mesh
+    """
+
+    # define handles on mesh in x-direction
+    map_x = np.zeros((frame.shape[0], frame.shape[1]), np.float32)
+
+    # define handles on mesh in y-direction
+    map_y = np.zeros((frame.shape[0], frame.shape[1]), np.float32)
+
+    s = time()
+    for i in range(x_motion_mesh.shape[0] - 1):
+        for j in range(x_motion_mesh.shape[1] - 1):
+
+            src = np.array([
+                [j    , i    ],
+                [j    , i + 1],
+                [j + 1, i    ],
+                [j + 1, i + 1]
+            ]) * PIXELS
+
+            dst = src + np.array([
+                [x_motion_mesh[i    , j    ], y_motion_mesh[i    , j    ]],
+                [x_motion_mesh[i + 1, j    ], y_motion_mesh[i + 1, j    ]],
+                [x_motion_mesh[i    , j + 1], y_motion_mesh[i    , j + 1]],
+                [x_motion_mesh[i + 1, j + 1], y_motion_mesh[i + 1, j + 1]]
+            ])
+
+            H, _ = cv2.findHomography(src, dst, cv2.RANSAC)
+
+            sk, ek = src[2, 1], src[1, 1]
+            sl, el = src[1, 0], src[2, 0]
+
+            L = np.arange(sl, el)  # x (cols)
+            K = np.arange(sk, ek)  # y (rows)
+            lv, kv = np.meshgrid(L, K, indexing='ij')
+
+            lv = lv.reshape(1, -1)
+            kv = kv.reshape(1, -1)
+            ones = np.ones((lv.shape))
+            coords = np.concatenate([lv, kv, ones], axis=0)
+
+            coords_t = np.dot(H, coords)
+
+            # if np.sum(coords_t[2] < 0.0000001) > 0:
+            #     print('has zeros')
+
+            coords_t /= coords_t[2]
+
+            map_x[sk:ek, sl:el] = coords_t[0].reshape((PIXELS, PIXELS)).T
+            map_y[sk:ek, sl:el] = coords_t[1].reshape((PIXELS, PIXELS)).T
+
+    # print('apply transform: %.2f' % (time() - s))
+
+    s = time()
+    # repeat motion vectors for remaining frame in y-direction
+    for i in range(PIXELS * x_motion_mesh.shape[0], map_x.shape[0]):
+        map_x[i, :] = map_x[PIXELS * x_motion_mesh.shape[0] - 1, :]
+        map_y[i, :] = map_y[PIXELS * x_motion_mesh.shape[0] - 1, :]
+
+    # print('map x: %.2f' % (time() - s))
+
+    s = time()
+    # repeat motion vectors for remaining frame in x-direction
+    for j in range(PIXELS * x_motion_mesh.shape[1], map_x.shape[1]):
+        map_x[:, j] = map_x[:, PIXELS * x_motion_mesh.shape[0] - 1]
+        map_y[:, j] = map_y[:, PIXELS * x_motion_mesh.shape[0] - 1]
+
+    # print('map y: %.2f' % (time() - s))
+
+    s = time()
+    # deforms mesh
+    new_frame = cv2.remap(frame, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    # print('deform mesh: %.2f' % (time() - s))
+
     return new_frame

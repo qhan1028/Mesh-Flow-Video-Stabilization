@@ -2,6 +2,7 @@ src/.ipynb_checkpoints
 src/*.pyc
 .idea/
 data/
-results/
 src/__pycache__/
 .DS_Store
+.ipynb_checkpoints/
+result/
