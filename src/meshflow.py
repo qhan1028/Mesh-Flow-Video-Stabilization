@@ -8,7 +8,7 @@ from scipy.signal import medfilt
 PIXELS = 16
 
 # motion propagation radius
-RADIUS = 300
+RADIUS = 266
 
 
 def point_transform(H, pt):
@@ -270,7 +270,7 @@ def generate_vertex_profiles(x_paths, y_paths, x_motion_mesh, y_motion_mesh):
     return x_paths, y_paths
 
 
-def mesh_warp_frame(frame, x_motion_mesh, y_motion_mesh):
+def mesh_warp_frame_slow(frame, x_motion_mesh, y_motion_mesh):
     """
     @param: frame is the current frame
     @param: x_motion_mesh is the motion_mesh to
@@ -383,14 +383,18 @@ def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
 
             lv = lv.reshape(1, -1)
             kv = kv.reshape(1, -1)
-            ones = np.ones((lv.shape))
+            ones = np.ones(lv.shape)
             coords = np.concatenate([lv, kv, ones], axis=0)
 
-            coords_t = np.dot(H, coords)
-            coords_t /= coords_t[2]
+            x, y, w = np.dot(H, coords)
+            x /= w
+            y /= w
 
-            map_x[sk:ek, sl:el] = coords_t[0].reshape((PIXELS, PIXELS)).T
-            map_y[sk:ek, sl:el] = coords_t[1].reshape((PIXELS, PIXELS)).T
+            x[w == 0] = lv.reshape(-1)[w == 0]
+            y[w == 0] = kv.reshape(-1)[w == 0]
+
+            map_x[sk:ek, sl:el] = x.reshape((PIXELS, PIXELS)).T
+            map_y[sk:ek, sl:el] = y.reshape((PIXELS, PIXELS)).T
 
     # repeat motion vectors for remaining frame in y-direction
     for i in range(PIXELS * x_motion_mesh.shape[0], map_x.shape[0]):

@@ -42,7 +42,7 @@ def offline_optimize_path(c, iterations=100, window_size=6):
 
     gamma = 1 + lambda_t * np.dot(W, np.ones((c.shape[2],)))
 
-    bar = tqdm(total=c.shape[0] * c.shape[1], desc="optimize")
+    bar = tqdm(total=c.shape[0] * c.shape[1], ncols=100, desc="%-10s" % "optimize")
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             P = np.asarray(c[i, j, :])
@@ -73,7 +73,7 @@ def real_time_optimize_path(c, buffer_size=200, iterations=10, window_size=32, b
         for j in range(W.shape[1]):
             W[i, j] = gauss(i, j, window_size)
 
-    bar = tqdm(total=c.shape[0] * c.shape[1], ascii=False, desc="optimize")
+    bar = tqdm(total=c.shape[0] * c.shape[1], ncols=100, desc="%-10s" % "optimize")
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             y = [];
@@ -149,7 +149,7 @@ def cvx_optimize_path(c, buffer_size=0, window_size=6):
     gauss_term, objective = 0, 0
     p = np.empty_like(c)
     
-    bar = tqdm(total=c.shape[0] * c.shape[1] * c.shape[2], ascii=False, desc="optimize")
+    bar = tqdm(total=c.shape[0] * c.shape[1] * c.shape[2], ncols=100, desc="%-10s" % "optimize")
     for i in range(c.shape[0]):
         for j in range(c.shape[1]):
             P = Variable(c.shape[2])
