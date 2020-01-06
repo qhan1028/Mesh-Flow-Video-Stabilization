@@ -215,8 +215,9 @@ class MeshFlowStabilizer:
         cap.release()
 
         if DEBUG:
-            print(
-                '\nsum: read %5.2f, features %5.2f, optical %5.2f, motion %5.2f, expand %5.2f, profiles %5.2f (ms)' %
+            print()
+            log.info(
+                'sum: read %5.2f, features %5.2f, optical %5.2f, motion %5.2f, expand %5.2f, profiles %5.2f (ms)' %
                 (sum_read_t, sum_features_t, sum_optical_t, sum_motion_t, sum_expand_t, sum_profiles_t))
         else:
             bar.close()
@@ -314,57 +315,58 @@ class MeshFlowStabilizer:
 
         frame_num = 0
         while frame_num < frame_count:
-            # try:
-            # reconstruct from frames
-            tic('read')
-            ret, frame = cap.read()
-            new_x_motion_mesh = self.new_x_motion_meshes[:, :, frame_num]
-            new_y_motion_mesh = self.new_y_motion_meshes[:, :, frame_num]
-            read_t = toc('read')
+            try:
+                # reconstruct from frames
+                tic('read')
+                ret, frame = cap.read()
+                new_x_motion_mesh = self.new_x_motion_meshes[:, :, frame_num]
+                new_y_motion_mesh = self.new_y_motion_meshes[:, :, frame_num]
+                read_t = toc('read')
 
-            # mesh warping
-            tic('warp')
-            new_frame = mesh_warp_frame(frame, new_x_motion_mesh, new_y_motion_mesh)
-            warp_t = toc('warp')
+                # mesh warping
+                tic('warp')
+                new_frame = mesh_warp_frame(frame, new_x_motion_mesh, new_y_motion_mesh)
+                warp_t = toc('warp')
 
-            # resize
-            tic('resize')
-            new_frame = new_frame[
-                        self.horizontal_border : -self.horizontal_border,
-                        self.vertical_border : -self.vertical_border, :]
-            new_frame = cv2.resize(new_frame, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_CUBIC)
-            resize_t = toc('resize')
+                # resize
+                tic('resize')
+                new_frame = new_frame[
+                            self.horizontal_border : -self.horizontal_border,
+                            self.vertical_border : -self.vertical_border, :]
+                new_frame = cv2.resize(new_frame, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_CUBIC)
+                resize_t = toc('resize')
 
-            # write frame
-            tic('write')
-            combined_out.write(np.concatenate((frame, new_frame), axis=1))
-            stabilized_out.write(new_frame)
-            write_t = toc('write')
+                # write frame
+                tic('write')
+                combined_out.write(np.concatenate((frame, new_frame), axis=1))
+                stabilized_out.write(new_frame)
+                write_t = toc('write')
 
-            # count
-            frame_num += 1
+                # count
+                frame_num += 1
 
-            # debug
-            if DEBUG:
-                print('\rframe %4d, read %5.2f, warp %5.2f, resize %5.2f, write %5.2f (ms)' %
-                      (frame_num, read_t, warp_t, resize_t, write_t), end='    ')
-                sum_read_t += read_t
-                sum_warp_t += warp_t
-                sum_resize_t += resize_t
-                sum_write_t += write_t
+                # debug
+                if DEBUG:
+                    print('\rframe %4d, read %5.2f, warp %5.2f, resize %5.2f, write %5.2f (ms)' %
+                          (frame_num, read_t, warp_t, resize_t, write_t), end='    ')
+                    sum_read_t += read_t
+                    sum_warp_t += warp_t
+                    sum_resize_t += resize_t
+                    sum_write_t += write_t
 
-            else:
-                bar.update(1)
+                else:
+                    bar.update(1)
 
-            # except:
-            #     break
+            except IndexError:
+                break
 
         cap.release()
         combined_out.release()
         stabilized_out.release()
 
         if DEBUG:
-            print('\nsum: read %5.2f, warp %5.2f, resize %5.2f, write %5.2f (ms)' %
+            print()
+            log.info('sum: read %5.2f, warp %5.2f, resize %5.2f, write %5.2f (ms)' %
                   (sum_read_t, sum_warp_t, sum_resize_t, sum_write_t))
         else:
             bar.close()

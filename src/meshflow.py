@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
-from tqdm import tqdm
-from time import time
 from scipy.signal import medfilt
+from utils import tic, toc
 
 # block of size in mesh
 PIXELS = 16
@@ -355,9 +354,13 @@ def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
     # define handles on mesh in y-direction
     map_y = np.zeros((frame.shape[0], frame.shape[1]), np.float32)
 
+    # debug
+    vertex_t, homo_t, meshgrid_t, transform_t = 0, 0, 0, 0
+
     for i in range(x_motion_mesh.shape[0] - 1):
         for j in range(x_motion_mesh.shape[1] - 1):
 
+            tic()
             src = np.array([
                 [j    , i    ],
                 [j    , i + 1],
@@ -371,16 +374,22 @@ def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
                 [x_motion_mesh[i    , j + 1], y_motion_mesh[i    , j + 1]],
                 [x_motion_mesh[i + 1, j + 1], y_motion_mesh[i + 1, j + 1]]
             ])
+            vertex_t += toc()
 
+            tic()
             H, _ = cv2.findHomography(src, dst, cv2.RANSAC)
+            homo_t += toc()
 
             sk, ek = src[2, 1], src[1, 1]
             sl, el = src[1, 0], src[2, 0]
 
-            L = np.arange(sl, el)  # x (cols)
+            tic()
             K = np.arange(sk, ek)  # y (rows)
+            L = np.arange(sl, el)  # x (cols)
             lv, kv = np.meshgrid(L, K, indexing='ij')
+            meshgrid_t += toc()
 
+            tic()
             lv = lv.reshape(1, -1)
             kv = kv.reshape(1, -1)
             ones = np.ones(lv.shape)
@@ -395,6 +404,9 @@ def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
 
             map_x[sk:ek, sl:el] = x.reshape((PIXELS, PIXELS)).T
             map_y[sk:ek, sl:el] = y.reshape((PIXELS, PIXELS)).T
+            transform_t += toc()
+
+    print('\n\tvertex %5.2f, homo %5.2f, meshgrid %5.2f, transform %5.2f (ms)' % (vertex_t, homo_t, meshgrid_t, transform_t))
 
     # repeat motion vectors for remaining frame in y-direction
     for i in range(PIXELS * x_motion_mesh.shape[0], map_x.shape[0]):
