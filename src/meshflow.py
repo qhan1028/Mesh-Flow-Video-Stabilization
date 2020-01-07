@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from scipy.signal import medfilt
-from utils import tic, toc
+from .utils import tic, toc
 
 # block of size in mesh
 PIXELS = 16
@@ -187,8 +187,7 @@ def motion_propagate_fast(old_points, new_points, old_frame):
             and y-direction for old_frame
     """
     # spreads motion over the mesh for the old_frame
-    x_motion = {};
-    y_motion = {};
+    x_motion, y_motion = {}, {}
     cols, rows = int(old_frame.shape[1] / PIXELS), int(old_frame.shape[0] / PIXELS)
 
     # pre-warping with global homography
@@ -201,8 +200,37 @@ def motion_propagate_fast(old_points, new_points, old_frame):
             y_motion[i, j] = pt[1] - ptrans[1]
 
     # distribute feature motion vectors
-    temp_x_motion = {}
-    temp_y_motion = {}
+    temp_x_motion, temp_y_motion = {}, {}
+
+    # # transform old points according to homography
+    # pt_T = np.concatenate((old_points, np.ones((len(old_points), 1))), axis=1).T
+    # pt_x, pt_y = old_points[:, 0], old_points[:, 1]
+    # pt_xt, pt_yt, pt_wt = np.dot(H, pt_T)
+    # pt_xt /= pt_wt
+    # pt_yt /= pt_wt
+    #
+    # # calculate delta in advance
+    # Dx = (new_points[:, 0] - pt_xt.T).flatten()
+    # Dy = (new_points[:, 1] - pt_yt.T).flatten()
+    #
+    # for i, (x, y) in enumerate(zip(pt_x, pt_y)):
+    #     # ptrans = point_transform(H, pt)
+    #     si = max(np.round((y - RADIUS) / PIXELS).astype(int), 0)
+    #     ei = min(np.round((y + RADIUS) / PIXELS).astype(int), rows)
+    #     sj = max(np.round((x - RADIUS) / PIXELS).astype(int), 0)
+    #     ej = min(np.round((x + RADIUS) / PIXELS).astype(int), cols)
+    #
+    #     # dx, dy = st[0] - ptrans[0], st[1] - ptrans[1]
+    #     for i in range(si, ei):
+    #         for j in range(sj, ej):
+    #             try:
+    #                 temp_x_motion[i, j].append(Dx[i])
+    #             except:
+    #                 temp_x_motion[i, j] = [Dx[i]]
+    #             try:
+    #                 temp_y_motion[i, j].append(Dy[i])
+    #             except:
+    #                 temp_y_motion[i, j] = [Dy[i]]
 
     for pt, st in zip(old_points, new_points):
         ptrans = point_transform(H, pt)
@@ -215,8 +243,6 @@ def motion_propagate_fast(old_points, new_points, old_frame):
         dx, dy = st[0] - ptrans[0], st[1] - ptrans[1]
         for i in range(si, ei):
             for j in range(sj, ej):
-                # dst = np.sqrt((j - pt[0]) ** 2 + (i - pt[1]) ** 2)
-                # if dst < RADIUS:
                 try:
                     temp_x_motion[i, j].append(dx)
                 except:

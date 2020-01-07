@@ -1,13 +1,13 @@
-from meshflow import generate_vertex_profiles
-from meshflow import mesh_warp_frame_slow
-from meshflow import mesh_warp_frame_fast
-from meshflow import motion_propagate_L1, motion_propagate_L2
-from meshflow import motion_propagate_fast
-from optimization import offline_optimize_path
-from optimization import real_time_optimize_path
-from optimization import parallel_optimize_path
-from optimization import cvx_optimize_path
-from utils import check_dir, get_logger, is_video, tic, toc
+from .meshflow import generate_vertex_profiles
+from .meshflow import mesh_warp_frame_slow
+from .meshflow import mesh_warp_frame_fast
+from .meshflow import motion_propagate_L1, motion_propagate_L2
+from .meshflow import motion_propagate_fast
+from .optimization import offline_optimize_path
+from .optimization import real_time_optimize_path
+from .optimization import parallel_optimize_path
+from .optimization import cvx_optimize_path
+from .utils import check_dir, get_logger, is_video, tic, toc
 from tqdm import tqdm
 import argparse
 import cv2
@@ -42,7 +42,7 @@ SLOW = False
 parser = argparse.ArgumentParser('Mesh Flow Stabilization')
 parser.add_argument('source_path', type=str, help='input folder or file path')
 parser.add_argument('output_dir', type=str, help='output folder')
-parser.add_argument('-m', '--method', type=str, choices=list(OPTIMIZER.keys()), default="real_time", help='stabilization method')
+parser.add_argument('-m', '--method', type=str, choices=list(OPTIMIZER.keys()), default="offline", help='stabilization method')
 parser.add_argument('--save-plot', action='store_true', default=False, help='plot paths and motion vectors')
 parser.add_argument('--plot-dir', type=str, default='data/plot', help='output graph folder')
 parser.add_argument('--save-params', action='store_true', default=False, help='save parameters')
@@ -446,7 +446,7 @@ class MeshFlowStabilizer:
 
 
 def process_file(args):
-    start_time = time.time()
+    tic('all')
     log.info(args.source_path)
 
     mfs = MeshFlowStabilizer(source_video=args.source_path,
@@ -461,7 +461,7 @@ def process_file(args):
         mfs.plot_motion_vectors()
         mfs.plot_vertex_profiles()
 
-    log.info('time elapsed: %.2f (s)' % (time.time() - start_time))
+    log.info('time elapsed (s): %.2f' % (toc('all') / 1000))
 
 
 def process_dir(args):

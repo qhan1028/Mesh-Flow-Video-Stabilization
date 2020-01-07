@@ -2,7 +2,7 @@ import numpy as np
 from cvxpy import *
 from tqdm import tqdm
 from multiprocessing import Pool
-from homography import optimize_path
+from .homography import optimize_path
 
 
 def gauss(t, r, window_size):
