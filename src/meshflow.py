@@ -354,25 +354,52 @@ def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
     # define handles on mesh in y-direction
     map_y = np.zeros((frame.shape[0], frame.shape[1]), np.float32)
 
+    # prepare mesh grid (avoid redundant computation)
+    K = np.arange(max(x_motion_mesh.shape) * PIXELS)  # rows, y
+    L = np.copy(K)  # cols, x
+    Kv, Lv = np.meshgrid(K, L, indexing='xy')
+
+    # pre-compute src: mesh grid
+    I = np.arange(max(x_motion_mesh.shape)) * PIXELS
+    J = np.copy(I)
+    Iv, Jv = np.meshgrid(I, J, indexing='xy')
+    S = np.concatenate((Iv[:, :, np.newaxis], Jv[:, :, np.newaxis]), axis=2)
+
+    # pre-compute dst: merge x_motion_mesh and y_motion_mesh
+    motion_mesh = np.concatenate((x_motion_mesh[:, :, np.newaxis], y_motion_mesh[:, :, np.newaxis]), axis=2)
+    D = S[0 : motion_mesh.shape[0], 0 : motion_mesh.shape[1]] + motion_mesh
+
     # debug
     vertex_t, homo_t, meshgrid_t, transform_t = 0, 0, 0, 0
 
-    for i in range(x_motion_mesh.shape[0] - 1):
-        for j in range(x_motion_mesh.shape[1] - 1):
+    for i in range(x_motion_mesh.shape[0] - 1):  # y
+        for j in range(x_motion_mesh.shape[1] - 1):  # x
 
             tic()
+            # src = np.array([
+            #     [j    , i    ],
+            #     [j    , i + 1],
+            #     [j + 1, i    ],
+            #     [j + 1, i + 1]
+            # ]) * PIXELS
             src = np.array([
-                [j    , i    ],
-                [j    , i + 1],
-                [j + 1, i    ],
-                [j + 1, i + 1]
-            ]) * PIXELS
+                S[i    , j    ],
+                S[i + 1, j    ],
+                S[i    , j + 1],
+                S[i + 1, j + 1]
+            ])
 
-            dst = src + np.array([
-                [x_motion_mesh[i    , j    ], y_motion_mesh[i    , j    ]],
-                [x_motion_mesh[i + 1, j    ], y_motion_mesh[i + 1, j    ]],
-                [x_motion_mesh[i    , j + 1], y_motion_mesh[i    , j + 1]],
-                [x_motion_mesh[i + 1, j + 1], y_motion_mesh[i + 1, j + 1]]
+            # dst = src + np.array([
+            #     [x_motion_mesh[i    , j    ], y_motion_mesh[i    , j    ]],
+            #     [x_motion_mesh[i + 1, j    ], y_motion_mesh[i + 1, j    ]],
+            #     [x_motion_mesh[i    , j + 1], y_motion_mesh[i    , j + 1]],
+            #     [x_motion_mesh[i + 1, j + 1], y_motion_mesh[i + 1, j + 1]]
+            # ])
+            dst = np.array([
+                D[i    , j    ],
+                D[i + 1, j    ],
+                D[i    , j + 1],
+                D[i + 1, j + 1]
             ])
             vertex_t += toc()
 
@@ -384,9 +411,11 @@ def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
             sl, el = src[1, 0], src[2, 0]
 
             tic()
-            K = np.arange(sk, ek)  # y (rows)
-            L = np.arange(sl, el)  # x (cols)
-            lv, kv = np.meshgrid(L, K, indexing='ij')
+            # K = np.arange(sk, ek)  # y (rows)
+            # L = np.arange(sl, el)  # x (cols)
+            # kv, lv = np.meshgrid(K, L, indexing='xy')
+            kv = Kv[sl : el, sk : ek]
+            lv = Lv[sl : el, sk : ek]
             meshgrid_t += toc()
 
             tic()
@@ -402,11 +431,11 @@ def mesh_warp_frame_fast(frame, x_motion_mesh, y_motion_mesh):
             x[w == 0] = lv.reshape(-1)[w == 0]
             y[w == 0] = kv.reshape(-1)[w == 0]
 
-            map_x[sk:ek, sl:el] = x.reshape((PIXELS, PIXELS)).T
-            map_y[sk:ek, sl:el] = y.reshape((PIXELS, PIXELS)).T
+            map_x[sk : ek, sl : el] = x.reshape((PIXELS, PIXELS)).T
+            map_y[sk : ek, sl : el] = y.reshape((PIXELS, PIXELS)).T
             transform_t += toc()
 
-    print('\n\tvertex %5.2f, homo %5.2f, meshgrid %5.2f, transform %5.2f (ms)' % (vertex_t, homo_t, meshgrid_t, transform_t))
+    # print('\n\tvertex %5.2f, homo %5.2f, meshgrid %5.2f, transform %5.2f (ms)' % (vertex_t, homo_t, meshgrid_t, transform_t))
 
     # repeat motion vectors for remaining frame in y-direction
     for i in range(PIXELS * x_motion_mesh.shape[0], map_x.shape[0]):

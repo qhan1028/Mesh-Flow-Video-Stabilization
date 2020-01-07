@@ -151,12 +151,12 @@ class MeshFlowStabilizer:
         while frame_num < frame_count:
 
             # processing frames
-            tic('read')
+            tic('cap')
             ret, frame = cap.read()
             if not ret:
                 break
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            read_t = toc('read')
+            read_t = toc('cap')
 
             # find corners in it
             tic('features')
@@ -200,8 +200,9 @@ class MeshFlowStabilizer:
 
             if DEBUG:
                 print(
-                    '\rframe %4d, read %5.2f, features %5.2f, optical %5.2f, motion %5.2f, expand %5.2f, profiles %5.2f (ms)' %
-                    (frame_num, read_t, features_t, optical_t, motion_t, expand_t, profiles_t), end='    ')
+                    '\r%-10s: frame %4d, cap %5.2f, features %5.2f, optical %5.2f, motion %5.2f, expand %5.2f, profiles %5.2f, total %5.2f' %
+                    ('read (ms)', frame_num, read_t, features_t, optical_t, motion_t, expand_t, profiles_t,
+                     sum([read_t, features_t, optical_t, motion_t, expand_t, profiles_t])), end='    ')
                 sum_read_t += read_t
                 sum_features_t += features_t
                 sum_optical_t += optical_t
@@ -217,8 +218,10 @@ class MeshFlowStabilizer:
         if DEBUG:
             print()
             log.info(
-                'sum: read %5.2f, features %5.2f, optical %5.2f, motion %5.2f, expand %5.2f, profiles %5.2f (ms)' %
-                (sum_read_t, sum_features_t, sum_optical_t, sum_motion_t, sum_expand_t, sum_profiles_t))
+                'read time (s): cap %5.2f, features %5.2f, optical %5.2f, motion %5.2f, expand %5.2f, profiles %5.2f, total %5.2f' %
+                (sum_read_t / 1000, sum_features_t / 1000, sum_optical_t / 1000,
+                 sum_motion_t / 1000, sum_expand_t / 1000, sum_profiles_t / 1000,
+                 sum([sum_read_t, sum_features_t, sum_optical_t, sum_motion_t, sum_expand_t, sum_profiles_t]) / 1000))
         else:
             bar.close()
 
@@ -317,11 +320,11 @@ class MeshFlowStabilizer:
         while frame_num < frame_count:
             try:
                 # reconstruct from frames
-                tic('read')
+                tic('cap')
                 ret, frame = cap.read()
                 new_x_motion_mesh = self.new_x_motion_meshes[:, :, frame_num]
                 new_y_motion_mesh = self.new_y_motion_meshes[:, :, frame_num]
-                read_t = toc('read')
+                read_t = toc('cap')
 
                 # mesh warping
                 tic('warp')
@@ -347,8 +350,9 @@ class MeshFlowStabilizer:
 
                 # debug
                 if DEBUG:
-                    print('\rframe %4d, read %5.2f, warp %5.2f, resize %5.2f, write %5.2f (ms)' %
-                          (frame_num, read_t, warp_t, resize_t, write_t), end='    ')
+                    print('\r%-10s: frame %4d, cap %5.2f, warp %5.2f, resize %5.2f, write %5.2f, total %5.2f' %
+                          ('write (ms)', frame_num, read_t, warp_t, resize_t, write_t,
+                           sum([read_t, warp_t, resize_t, write_t])), end='    ')
                     sum_read_t += read_t
                     sum_warp_t += warp_t
                     sum_resize_t += resize_t
@@ -366,8 +370,9 @@ class MeshFlowStabilizer:
 
         if DEBUG:
             print()
-            log.info('sum: read %5.2f, warp %5.2f, resize %5.2f, write %5.2f (ms)' %
-                  (sum_read_t, sum_warp_t, sum_resize_t, sum_write_t))
+            log.info('write time (s): cap %5.2f, warp %5.2f, resize %5.2f, write %5.2f, total %5.2f' %
+                  (sum_read_t / 1000, sum_warp_t / 1000, sum_resize_t / 1000, sum_write_t / 1000,
+                   sum([sum_read_t, sum_warp_t, sum_resize_t, sum_write_t]) / 1000))
         else:
             bar.close()
 
