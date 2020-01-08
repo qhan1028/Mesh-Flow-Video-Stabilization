@@ -1,8 +1,10 @@
-![demo](demo.gif)
+![demo](imgs/demo.gif)
 
 # Mesh Flow Video Stabilization
 
 This repository is forked from [sudheerachary/Mesh-Flow-Video-Stabilization](https://github.com/sudheerachary/Mesh-Flow-Video-Stabilization), and the main contribution of this repository is the improvement of motion propagation and mesh warping. Check this [link](https://github.com/sudheerachary/Mesh-Flow-Video-Stabilization/blob/master/README.md) to see the original readme.
+
+* Project Spec - [link](https://docs.google.com/presentation/d/1gb7m_3qYPAGqTF_3e8rLbWETo5fIXYoRgiU8yriAKLg)
 
 ## Requirements
 
@@ -65,7 +67,7 @@ We write a simple timer utility to test each part of the original code, and take
 * Total time elapsed $\approx$ **55.24** s
 
 
-### Improvements
+### Improvement
 
 The following tables show that our code really improves the speed of meshflow.
 

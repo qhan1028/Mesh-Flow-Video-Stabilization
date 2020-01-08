@@ -2,9 +2,9 @@
 
 ## Team Members
 
-* R07944007 林良翰 - Meshflow implementation and improvement
+* R07944007 林良翰 - Meshflow implementation, refactoring and improvement
 * R08942124 吳佳展 - Experiment (motion propagation)
-* B03902099 黃奕杰 - Report, slides
+* B03902099 黃奕杰 - Report, slide
 * D06922010 林昶丞 - Experiment (mesh warping)
 
 ## Requirements
