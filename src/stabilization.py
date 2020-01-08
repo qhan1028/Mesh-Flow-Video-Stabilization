@@ -480,8 +480,12 @@ def main(args):
     DEBUG = args.debug
 
     if args.slow:
-        motion_propagate = motion_propagate_L1
+        motion_propagate = motion_propagate_L2
         mesh_warp_frame = mesh_warp_frame_slow
+        
+    else:
+        motion_propagate = motion_propagate_fast
+        mesh_warp_frame = mesh_warp_frame_fast
 
     if osp.exists(args.source_path):
         if osp.isdir(args.source_path):
