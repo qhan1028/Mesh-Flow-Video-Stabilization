@@ -96,8 +96,10 @@ The following tables show that our code really improves the speed of meshflow.
 
 The following table is the final comparison between original and improved code with multiple videos. Our improvement makes meshflow **10.38**x faster than original code.
 
-|     Video     | parallex | running | sample | selfie | simple | shaky-5 | **Total**  |
+|     Video     | parallax | running | sample | selfie | simple | shaky-5 | **Total**  |
 | :-----------: | :------: | :-----: | :----: | :----: | :----: | :-----: | :--------: |
 | Original (s)  |  890.62  | 684.08  | 428.36 | 371.21 | 434.18 | 690.14  |  3498.59   |
 | Improved (s)  |  71.90   |  60.35  | 46.30  | 49.31  | 48.20  |  60.96  |   337.02   |
 | Speed Up Rate |  12.39x  | 11.34x  | 9.25x  | 7.53x  | 9.01x  | 11.32x  | **10.38**x |
+
+Result download link - https://drive.google.com/open?id=1o5Ybedo7gt4w-jFcA9uzd0UsRVVgwOrS
