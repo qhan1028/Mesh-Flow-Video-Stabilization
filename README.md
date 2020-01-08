@@ -2,7 +2,7 @@
 
 # Mesh Flow Video Stabilization
 
-This repository is forked from [sudheerachary/Mesh-Flow-Video-Stabilization](https://github.com/sudheerachary/Mesh-Flow-Video-Stabilization), and the main contribution of this repository is improvement of motion propagation and mesh warping. Check this [link](https://github.com/sudheerachary/Mesh-Flow-Video-Stabilization/blob/master/README.md) to see the original readme.
+This repository is forked from [sudheerachary/Mesh-Flow-Video-Stabilization](https://github.com/sudheerachary/Mesh-Flow-Video-Stabilization), and the main contribution of this repository is the improvement of motion propagation and mesh warping. Check this [link](https://github.com/sudheerachary/Mesh-Flow-Video-Stabilization/blob/master/README.md) to see the original readme.
 
 ## Requirements
 
